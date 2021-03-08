@@ -4,18 +4,19 @@
       .top
         .left
           .title(v-if="mode == 'week'") 預約行事曆
-          .switch-day(v-if="mode == 'day'") {{today}}
+          .switch-date(v-if="mode == 'day'")
+            .btn-change-date.prevDay(@click="switchPrevDate") <
+            .selected-date {{selectedDate.toLocaleDateString('en-ZA')}}
+            .btn-change-date.nextDat(@click="switchNextDate") >
         .right
-          .change-mode.clickable(@click="changeMode") {{modeText}}
+          .change-mode.clickable(@click="switchMode") {{mode == 'week' ? '週檢視' : '日檢視'}}
           .profile.clickable 莉
 
       .grid-container
-        .item.calendar-icon 口
-        .item.item-day(
-          v-for="day in days") {{day}}
-        .item.item-date(
+        RouterLink.cell.calendar-icon.no-decoration(:to="{name: 'Months'}") 口
+        .cell.cell-date(
           v-for="date in week"
-          :class="{ dot: date == todayDate}") {{date}}
+          :class="[ { dot: date == today.toString() },{ 'selected': selectedDate == date.toString() && mode == 'day'} ]" ) {{date.toString().split(' ')[0][0]}} <br> {{date.getDate()}}
     
     .downer-main
       WeekMode.week-mode(v-if="mode == 'week'")
@@ -24,53 +25,51 @@
 </template>
 
 <script>
-function mod(n, m) {
-  return ((n % m) + m) % m;
-}
-Date.prototype.getNormalDay = function() {
-  return mod(this.getDay() - 1, 7);
-}
-function getWeek(fromDate){
-    let monday = new Date(fromDate.setDate( fromDate.getDate() - fromDate.getNormalDay()))
-    let result = [new Date(monday).toString().split(' ')[2]]
-    while (monday.setDate(monday.getDate() + 1) && monday.getDay() !== 1) {
-        result.push(new Date(monday).toString().split(' ')[2])
-    }
-    return result
-}
-let today = new Date().toLocaleDateString('en-ZA');
-let week = getWeek(new Date(today));
-let todayDate = today.split('/')[2]
-
 import WeekMode from "@/components/WeekMode"
 import DayMode from "@/components/DayMode"
 export default {
-  data() {
-    return {
-      mode: 'week',
-      modeText: '週檢視',
-      week: week,
-      days: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-      today: today,
-      todayDate: todayDate
-    }
-  },
   components: {
     WeekMode,
     DayMode
   },
-  methods: {
-    changeMode() {
-      if(this.mode == 'week') {
-        this.mode = 'day'
-        this.modeText = '日檢視'
-      }
-      else {
-        this.mode = 'week'
-        this.modeText = '週檢視'
-      }
-
+  computed: {
+    mode: function() {
+      return this.$store.state.mode;
+    },
+    week: function() {
+      return this.$store.state.week
+    },
+    today: function() {
+      return this.$store.state.today
+    },
+    selectedDate: function() {
+      return this.$store.state.selectedDate
     }
+  },
+  methods: {
+    switchMode() {
+      this.$store.dispatch('switchMode');
+    },
+    switchPrevDate() {
+      const prevDate = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), this.selectedDate.getDate() );
+      const newSelectedDate = new Date(prevDate.setDate(prevDate.getDate() - 1));
+      this.$store.dispatch('changeSelectedDate', newSelectedDate);
+      this.$store.dispatch('getWeek', this.$store.state.selectedDate);
+    },
+    switchNextDate() {
+      const nextDate = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), this.selectedDate.getDate() );
+      const newSelectedDate = new Date(nextDate.setDate(nextDate.getDate() + 1));
+      this.$store.dispatch('changeSelectedDate', newSelectedDate);
+      this.$store.dispatch('getWeek', this.$store.state.selectedDate);
+    }
+  },
+  mounted() {
+    this.$store.state.selectedDate;
+    this.$store.state.today;
+    this.$store.dispatch('getWeek',this.$store.state.selectedDate)
+  },
+  beforeCreate: function() {
+    this.$store.dispatch('getWeek', this.$store.state.today);
   }
 }
 </script>
@@ -84,10 +83,34 @@ $triangle-width: 6px
   position: relative
   z-index: 10
   background-color: white
-  height: 22vh
+  min-height: 22vh
 .top
   display: flex
   justify-content: space-between
+  .left
+    flex: 1
+    display: flex
+    justify-content: flex-start
+    align-items: center
+    .title
+      font-size: 1.5em
+      margin-left: 2em
+    .switch-date
+      display: flex
+    .btn-change-date
+      cursor: pointer
+      display: inline-flex
+      background-color: #505050
+      color: white
+      font-weight: 700
+      width: 1em
+      height: 1em
+      padding: 3px
+      border-radius: 50%
+      justify-content: center
+      align-items: center
+      margin: 0 2em
+
   .right
     display: flex
     justify-content: space-between
@@ -108,57 +131,28 @@ $triangle-width: 6px
         border-left: solid $triangle-width transparent
         border-right: solid $triangle-width transparent
         margin-left: 10px
-  .left
-    flex: 1
-    display: flex
-    justify-content: center
-    align-items: center
-    .switch-day
-      &::before, &::after
-        cursor: pointer
-        display: inline-flex
-        background-color: #505050
-        color: white
-        font-weight: 700
-        width: 1em
-        height: 1em
-        padding: 3px
-        border-radius: 50%
-        justify-content: center
-        align-items: center
-        margin: 0 2em
-      &::before
-        content: '<'
-      &::after
-        content: '>'
 
 .grid-container
   display: grid
   grid-template-columns: repeat(8, 1fr)
+  column-gap: 2px
   .calendar-icon
+    cursor: pointer
     grid-column-start: 1
     grid-column-end: 2
     grid-row-start: 1
     grid-row-end: 3
     justify-self: center
     align-self: center
-  .item-date
-    margin-top: 10px
-  .dot
+  .cell-date
+    padding-top: 8px
     display: flex
-    justify-content: flex-start
     flex-direction: column
-    align-items: center
-    &::after
-      content: ''
-      display: inline-block
-      width: 5px
-      height: 5px
-      border-radius: 50%
-      background-color: #3EDCCA
-      justify-content: center
-      margin-top: 5px
-
+  .selected
+    margin: 0 10px
+    border-radius: 10px
+    background-color: $primary
+    color: white
 .downer-main
   height: 78vh
   overflow: scroll

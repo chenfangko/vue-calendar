@@ -1,9 +1,9 @@
 <template lang="pug">
 section
   .grid-container
-    .item.item-time(v-for="time in 24")
+    .cell.cell-time(v-for="time in 24")
       .time {{time < 13 ? time : time - 12}}:00 {{time < 13 ? 'am' : 'pm'}}
-    .item.item-slot(v-for="slot in 168")
+    .cell.cell-slot(v-for="slot in 168")
       .slot-schedule
 </template>
 
@@ -22,11 +22,6 @@ export default {
       }]
     }
   },
-  // methods: {
-  //   // checkSchedule() {
-  //   //   if()
-  //   // }
-  // }
 }
 </script>
 
@@ -41,9 +36,9 @@ export default {
   column-gap: 2px
   row-gap: 2px
   grid-auto-flow: column
-  .item
-    background-color: white
-  .item-time, .item-slot
+  .cell
+    background-color: #fff
+  .cell-time, .cell-slot
     display: grid
     .time
       align-self: end
